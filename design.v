@@ -82,6 +82,7 @@ module arm (
 	wire [1:0] ResultSrc;
   	wire lmulFlag;
   	wire RegSrcMul;
+  	wire mullargo;
   
 	controller c(
 		.clk(clk),
@@ -100,7 +101,8 @@ module arm (
 		.ImmSrc(ImmSrc),
       	.ALUControl(ALUControl),
       	.lmulFlag(lmulFlag),
-      	.RegSrcMul(RegSrcMul)
+      .RegSrcMul(RegSrcMul),
+      .mullargo(mullargo)
 	);
 	datapath dp(
 		.clk(clk),
@@ -121,7 +123,8 @@ module arm (
 		.ImmSrc(ImmSrc),
       	.ALUControl(ALUControl),
       	.lmulFlag(lmulFlag),
-      	.RegSrcMul(RegSrcMul)
+      .RegSrcMul(RegSrcMul),
+      .mullargo(mullargo)
 	);
 endmodule
 
@@ -143,7 +146,8 @@ module controller (
 	ImmSrc,
 	ALUControl,
   	lmulFlag,
-  	RegSrcMul
+  	RegSrcMul,
+  	mullargo
 );
 	input wire clk;
 	input wire reset;
@@ -162,7 +166,7 @@ module controller (
   	output wire [2:0] ALUControl;
   	output wire lmulFlag;
   	output wire RegSrcMul;
-  
+  	output reg mullargo;
   
 	wire [1:0] FlagW;
 	wire PCS;
@@ -192,7 +196,8 @@ module controller (
 		.RegSrc(RegSrc),
       	.ALUControl(ALUControl),
       	.lmulFlag(lmulFlag),
-      	.RegSrcMul(RegSrcMul)
+      .RegSrcMul(RegSrcMul),
+      .mullargo(mullargo)
 	);
 	condlogic cl(
 		.clk(clk),
@@ -231,7 +236,8 @@ module decode (
 	RegSrc,
 	ALUControl,
   	lmulFlag,
-  	RegSrcMul
+  	RegSrcMul,
+  	mullargo
 );
 	input wire clk;
 	input wire reset;
@@ -256,7 +262,10 @@ module decode (
 	wire Branch;
 	wire ALUOp;
   	output wire RegSrcMul;//Cambios en los operandos 
-    reg mullargo;
+  	output wire mullargo;
+  	reg mullargo_reg;
+  
+  	assign mullargo = mullargo_reg;
 
 	// Main FSM
 	mainfsm fsm(
@@ -283,19 +292,19 @@ module decode (
 	// Remember, you may reuse code from previous labs.
 	// ALU Decoder
 	always @(*) begin
-      	mullargo = 0;
+      	mullargo_reg = 0;
     	if (ALUOp) begin
         	if (Mop[3:0] == 4'b1001) begin
             	case (Funct[4:1])
                 	4'b0000: ALUControl = 3'b101;       // MUL
                   	4'b0100: begin
                          ALUControl = 3'b110; //UMULL
-                      	 mullargo = 1;
+                      	 mullargo_reg = 1; 
                     end
                   
                   	4'b0110: begin
                          ALUControl = 3'b111; //SMULL
-                      	 mullargo = 1;
+                      	 mullargo_reg = 1; 
                     end
             	endcase
         	end
@@ -596,7 +605,8 @@ module datapath (
 	ImmSrc,
 	ALUControl,
   	lmulFlag,
-  	RegSrcMul
+  	RegSrcMul,
+  	mullargo,
 );
 	input wire clk;
 	input wire reset;
@@ -618,6 +628,7 @@ module datapath (
   	
   	input wire lmulFlag;
   	input wire RegSrcMul;
+  	input wire mullargo;
   
 	wire [31:0] PCNext;
 	wire [31:0] PC;
@@ -760,6 +771,7 @@ module datapath (
 		SrcA,
 		SrcB,
 		ALUControl,
+      	mullargo,
 		ALUResult,
       	ALUResult2,
 		ALUFlags
@@ -843,6 +855,7 @@ endmodule
 
 module alu(input  [31:0] a, b,
            input  [2:0]  ALUControl,
+           input mullargo,
            output reg [31:0] Result,
            output reg [31:0] Result2,
            output wire [3:0]  ALUFlags);
@@ -863,7 +876,14 @@ module alu(input  [31:0] a, b,
         	3'b100: Result = a ^ b;
         	3'b101: Result = a * b;
           	
-        	3'b110: {Result, Result2} = a * b;
+        	3'b110: begin
+                if (mullargo) begin        
+                    {Result, Result2} = a * b;
+                end else begin             
+                    Result  = a / b;       
+                    Result2 = a % b;       
+                end
+            end
         	3'b111:
           	case({a[31],b[31]})
               2'b00: {Result, Result2} = (a)*(b);
