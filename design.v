@@ -273,9 +273,9 @@ module decode (
 		.RegW(RegW),
 		.MemW(MemW),
 		.Branch(Branch),
-      	.ALUOp(ALUOp),
-        .lmulFlag(lmulFlag),
-      	.mullargo(mullargo)
+      	.ALUOp(ALUOp),	
+      	.mullargo(mullargo),
+        .lmulFlag(lmulFlag)
 	);
 
 	// ADD CODE BELOW
@@ -283,6 +283,7 @@ module decode (
 	// Remember, you may reuse code from previous labs.
 	// ALU Decoder
 	always @(*) begin
+      	mullargo = 0;
     	if (ALUOp) begin
         	if (Mop[3:0] == 4'b1001) begin
             	case (Funct[4:1])
@@ -311,6 +312,8 @@ module decode (
         	FlagW[1] = Funct[0];
         	FlagW[0] = Funct[0] & ((ALUControl == 3'b000) | (ALUControl == 3'b001));
     	end
+      
+      //
     	else begin
         	ALUControl = 3'b000;
         	FlagW = 2'b00;
@@ -345,8 +348,8 @@ module mainfsm (
 	MemW,
 	Branch,
 	ALUOp,
-  	lmulFlag,
-  	mullargo
+  	mullargo,
+  	lmulFlag
 );
 	input wire clk;
 	input wire reset;
@@ -379,7 +382,7 @@ module mainfsm (
 	localparam [3:0] ALUWB = 8;
 	localparam [3:0] BRANCH = 9;
 	localparam [3:0] UNKNOWN = 10;
-  	localparam [3:0] ALUWB2= 11
+  	localparam [3:0] ALUWB2= 11;
 
 	// state register
 	always @(posedge clk or posedge reset)
@@ -922,7 +925,10 @@ module regfile (
 	ra1,
 	ra2,
 	wa3,
+  	wa4,
 	wd3,
+  	wd4,
+  	mullargo,
 	r15,
 	rd1,
 	rd2
@@ -932,7 +938,10 @@ module regfile (
 	input wire [3:0] ra1;
 	input wire [3:0] ra2;
 	input wire [3:0] wa3;
+  	input wire [3:0] wa4;
 	input wire [31:0] wd3;
+  	input wire [31:0] wd4;
+  	input wire mullargo;
 	input wire [31:0] r15;
 	output wire [31:0] rd1;
 	output wire [31:0] rd2;
@@ -940,6 +949,9 @@ module regfile (
 	always @(posedge clk)
 		if (we3) begin
 			rf[wa3] <= wd3;
+          if(mullargo) begin
+            rf[wa4] <=wd4;
+          end
 		end
 	assign rd1 = (ra1 == 4'b1111 ? r15 : rf[ra1]);
 	assign rd2 = (ra2 == 4'b1111 ? r15 : rf[ra2]);
