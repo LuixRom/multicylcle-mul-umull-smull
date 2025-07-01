@@ -623,8 +623,9 @@ module datapath (
 	wire [31:0] RD2;
 	wire [31:0] A;
 	wire [31:0] ALUResult;
-  wire [31:0] ALUResult2;
+    wire [31:0] ALUResult2;
 	wire [31:0] ALUOut;
+  	wire [31:0] ALUOut2;
 	wire [3:0] RA1;
 	wire [3:0] RA2;
   
@@ -659,6 +660,7 @@ module datapath (
 		.d(ReadData),
 		.q(Instr)
 	);
+  
 	flopr #(32) readdatareg(
 		.clk(clk),
 		.reset(reset),
@@ -680,11 +682,63 @@ module datapath (
     	.y(_RA2)
 	);
   
+  
+  	mux2 #(4) ra2mux(
+    	.d0(_RA2),
+    	.d1(Instr[15:12]),
+    	.s(RegSrc[1]),
+    	.y(RA2)
+	);
+  
   	mux2 #(4) a3mux(
     	.d0(Instr[15:12]),  // Rd normal
     	.d1(Instr[19:16]),  // Rn como destino en MUL
     	.s(RegSrcMul),
     	.y(A3)
+	);
+  
+  	regfile rf(
+		.clk(clk),
+		.we3(RegWrite),
+		.ra1(RA1),
+		.ra2(RA2),
+      	.wa3(A3),
+      	.wa4(Instr[15:12]),
+		.wd3(Result),
+      	.wd4(ALUOut2),
+      	.mullargo(lmulflag),
+		.r15(Result),
+		.rd1(RD1),
+		.rd2(RD2)
+	);
+  
+  
+  	extend ext(
+		.Instr(Instr[23:0]),
+		.ImmSrc(ImmSrc),
+		.ExtImm(ExtImm)
+    );
+  
+  	flopr #(64) rdreg(
+      .clk(clk), 
+      .reset(reset), 
+      .d({RD1, RD2}), 
+      .q({A, WriteData})
+    );
+  
+  	mux2 #(32) srcamux(
+		.d0(A),
+		.d1(PC),
+      .s(ALUSrcA[0]),
+		.y(SrcA)
+	);
+  
+  	mux3 #(32) srcbmux(
+		.d0(WriteData),
+		.d1(ExtImm),
+      	.d2(32'd4),
+		.s(ALUSrcB),
+		.y(SrcB)
 	);
   
   
@@ -694,31 +748,18 @@ module datapath (
     	.s(RegSrc[0]),
     	.y(RA1)
 	);
-	
-  	
-  	mux2 #(4) ra2mux(
-    	.d0(_RA2),
-    	.d1(Instr[15:12]),
-    	.s(RegSrc[1]),
-    	.y(RA2)
-	);
   
-	regfile rf(
-		.clk(clk),
-		.we3(RegWrite),
-		.ra1(RA1),
-		.ra2(RA2),
-      	.wa3(A3),
-		.wd3(Result),
-		.r15(Result),
-		.rd1(RD1),
-		.rd2(RD2)
+  	alu alu(
+		SrcA,
+		SrcB,
+		ALUControl,
+		ALUResult,
+      	ALUResult2;
+		ALUFlags
 	);
-	extend ext(
-		.Instr(Instr[23:0]),
-		.ImmSrc(ImmSrc),
-		.ExtImm(ExtImm)
-	);
+  	
+	
+	
 	flopr2 #(32) regdatareg(
 		.clk(clk),
 		.reset(reset),
@@ -727,33 +768,22 @@ module datapath (
 		.q0(A),
 		.q1(WriteData)
 	);
-	mux3 #(32) srcamux(
-		.d0(A),
-		.d1(PC),
-		.d2(ALUOut),
-		.s(ALUSrcA),
-		.y(SrcA)
-	);
-	mux3 #(32) srcbmux(
-		.d0(WriteData),
-		.d1(ExtImm),
-		.d2(4),
-		.s(ALUSrcB),
-		.y(SrcB)
-	);
-	alu alu(
-		SrcA,
-		SrcB,
-		ALUControl,
-		ALUResult,
-		ALUFlags
-	);
+	
+
 	flopr #(32) aluresultreg(
 		.clk(clk),
 		.reset(reset),
 		.d(ALUResult),
 		.q(ALUOut)
 	);
+  
+  flopr #(32) aluresultreg2(
+		.clk(clk),
+		.reset(reset),
+    	.d(ALUResult2),
+    	.q(ALUOut2)
+	);
+  
 	mux3 #(32) resmux(
 		.d0(ALUOut),
 		.d1(Data),
