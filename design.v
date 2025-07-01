@@ -299,7 +299,11 @@ module decode (
                     end
             	endcase
         	end
-        	else begin
+          else if(Mop[3:0] == 4'b0111) begin
+            if (Funct[4:1] == 4'b0001)
+              ALUControl= 3'b110;  //UDIV
+          end
+          else begin
             	case (Funct[4:1])
                 	4'b0100: ALUControl = 3'b000;       // ADD
                 	4'b0010: ALUControl = 3'b001;       // SUB
@@ -858,6 +862,7 @@ module alu(input  [31:0] a, b,
         	3'b011: Result = a | b;
         	3'b100: Result = a ^ b;
         	3'b101: Result = a * b;
+          	
         	3'b110: {Result, Result2} = a * b;
         	3'b111:
           	case({a[31],b[31]})
