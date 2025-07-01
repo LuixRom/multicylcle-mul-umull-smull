@@ -441,6 +441,7 @@ module mainfsm (
 			EXECUTER: controls = 14'b00000000000010;
 			EXECUTEI: controls = 14'b00000000000110;
 			ALUWB: controls =    14'b00010000000000;
+          	ALUWB2: controls = 	 14'b00010000000001;
 			BRANCH: controls =   14'b01000010100100;
 			default: controls =  14'bxxxxxxxxxxxxxx;
 		endcase
@@ -622,6 +623,7 @@ module datapath (
 	wire [31:0] RD2;
 	wire [31:0] A;
 	wire [31:0] ALUResult;
+  wire [31:0] ALUResult2;
 	wire [31:0] ALUOut;
 	wire [3:0] RA1;
 	wire [3:0] RA2;
@@ -818,16 +820,20 @@ module alu(input  [31:0] a, b,
     always @(*)
     begin
       	casex (ALUControl[2:0])
-        3'b00?: Result = sum;
-        3'b010: Result = a & b;
-        3'b011: Result = a | b;
-        3'b100: Result = a ^ b;
-        3'b101: Result = a * b;
-        3'b110: {Result, Result2} = a * b;
-        3'b111:
-          case(
-       
-        endcase
+        	3'b00?: Result = sum;
+        	3'b010: Result = a & b;
+        	3'b011: Result = a | b;
+        	3'b100: Result = a ^ b;
+        	3'b101: Result = a * b;
+        	3'b110: {Result, Result2} = a * b;
+        	3'b111:
+          	case({a[31],b[31]})
+            	2'b00: {Result, Result2} = (a)*(b)
+                2'b01: {Result, Result2} = -((a)*-(b))
+                2'b10: {Result, Result2} = -(-(a)*(b))
+                2'b11: {Result, Result2} = -(a) * -(b)
+       	 	endcase
+       endcase
     end
     assign neg      = Result[31];
     assign zero     = (Result == 32'b0);
