@@ -709,7 +709,7 @@ module datapath (
       	.wa4(Instr[15:12]),
 		.wd3(Result),
       	.wd4(ALUOut2),
-      	.mullargo(lmulflag),
+      	.mullargo(lmulFlag),
 		.r15(Result),
 		.rd1(RD1),
 		.rd2(RD2)
@@ -757,7 +757,7 @@ module datapath (
 		SrcB,
 		ALUControl,
 		ALUResult,
-      	ALUResult2;
+      	ALUResult2,
 		ALUFlags
 	);
   	
@@ -861,10 +861,10 @@ module alu(input  [31:0] a, b,
         	3'b110: {Result, Result2} = a * b;
         	3'b111:
           	case({a[31],b[31]})
-            	2'b00: {Result, Result2} = (a)*(b)
-                2'b01: {Result, Result2} = -((a)*-(b))
-                2'b10: {Result, Result2} = -(-(a)*(b))
-                2'b11: {Result, Result2} = -(a) * -(b)
+              2'b00: {Result, Result2} = (a)*(b);
+              2'b01: {Result, Result2} = -((a)*-(b));
+              2'b10: {Result, Result2} = -(-(a)*(b));
+              2'b11: {Result, Result2} = -(a) * -(b);
        	 	endcase
        endcase
     end
