@@ -685,6 +685,9 @@ module datapath (
 		.d(ReadData),
 		.q(Data)
 	);
+  
+  
+  
 	
   	mux2 #(4) ra1mulmux(
       .d0(Instr[19:16]), 
@@ -692,6 +695,13 @@ module datapath (
       .s(RegSrcMul), 
       .y(_RA1)
     );
+  
+    mux2 #(4) ra1mux(
+    	.d0(_RA1),
+    	.d1(4'd15),
+    	.s(RegSrc[0]),
+    	.y(RA1)
+	);
   
   	mux2 #(4) ra2mulmux(
     	.d0(Instr[3:0]),    // Rm normal
@@ -737,6 +747,7 @@ module datapath (
 		.ExtImm(ExtImm)
     );
   
+  
   	flopr #(64) rdreg(
       .clk(clk), 
       .reset(reset), 
@@ -760,13 +771,7 @@ module datapath (
 	);
   
   
-  	mux2 #(4) ra1mux(
-    	.d0(_RA1),
-    	.d1(4'd15),
-    	.s(RegSrc[0]),
-    	.y(RA1)
-	);
-  
+
   	alu alu(
 		SrcA,
 		SrcB,
@@ -777,16 +782,6 @@ module datapath (
 		ALUFlags
 	);
   	
-	
-	
-	flopr2 #(32) regdatareg(
-		.clk(clk),
-		.reset(reset),
-		.d0(RD1),
-		.d1(RD2),
-		.q0(A),
-		.q1(WriteData)
-	);
 	
 
 	flopr #(32) aluresultreg(
@@ -867,31 +862,32 @@ module alu(input  [31:0] a, b,
     assign condinvb = ALUControl[0] ? ~b : b;
     assign sum = a + condinvb + ALUControl[0];
 
-    always @(*)
-    begin
-      	casex (ALUControl[2:0])
-        	3'b00?: Result = sum;
-        	3'b010: Result = a & b;
-        	3'b011: Result = a | b;
-        	3'b100: Result = a ^ b;
-        	3'b101: Result = a * b;
-          	
-        	3'b110: begin
-                if (mullargo) begin        
-                    {Result, Result2} = a * b;
-                end else begin             
-                    Result  = a / b;       
-                    Result2 = a % b;       
-                end
-            end
-        	3'b111:
-          	case({a[31],b[31]})
-              2'b00: {Result, Result2} = (a)*(b);
-              2'b01: {Result, Result2} = -((a)*-(b));
-              2'b10: {Result, Result2} = -(-(a)*(b));
-              2'b11: {Result, Result2} = -(a) * -(b);
-       	 	endcase
-       endcase
+    always @(*) begin
+        casex (ALUControl)
+            3'b00?:  Result = sum;              
+            3'b010:  Result = a & b;            
+            3'b011:  Result = a | b;            
+            3'b100:  Result = a ^ b;            
+
+            
+            3'b101: begin                      
+                       Result  = a * b;         
+                       Result2 = 32'd0;         
+                     end
+
+           
+            3'b110: begin
+                       if (mullargo)            
+                           {Result2, Result} = a * b;          
+                       else begin               
+                           Result  = a / b;
+                           Result2 = a % b;     
+                       end
+                     end
+
+
+            3'b111:   {Result2, Result} = $signed(a) * $signed(b);  
+        endcase
     end
     assign neg      = Result[31];
     assign zero     = (Result == 32'b0);
