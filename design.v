@@ -71,7 +71,7 @@ module arm (
 	wire [31:0] Instr;
 	wire [3:0] ALUFlags;
 	wire PCWrite;
-	wire RegWrite;
+  	wire [1:0] RegWrite;
 	wire IRWrite;
 	wire AdrSrc;
 	wire [1:0] RegSrc;
@@ -172,6 +172,7 @@ module controller (
 	wire PCS;
 	wire NextPC;
 	wire RegW;
+  	wire RegW2;
 	wire MemW;
   
   
@@ -186,6 +187,7 @@ module controller (
 		.PCS(PCS),
 		.NextPC(NextPC),
 		.RegW(RegW),
+      	.RegW2(RegW2),
 		.MemW(MemW),
 		.IRWrite(IRWrite),
 		.AdrSrc(AdrSrc),
@@ -208,6 +210,7 @@ module controller (
 		.PCS(PCS),
 		.NextPC(NextPC),
 		.RegW(RegW),
+      	.RegW2(RegW2),
 		.MemW(MemW),
 		.PCWrite(PCWrite),
 		.RegWrite(RegWrite),
@@ -226,6 +229,7 @@ module decode (
 	PCS,
 	NextPC,
 	RegW,
+  	RegW2,
 	MemW,
 	IRWrite,
 	AdrSrc,
@@ -249,6 +253,7 @@ module decode (
 	output wire PCS;
 	output wire NextPC;
 	output wire RegW;
+  	output wire RegW2;
 	output wire MemW;
 	output wire IRWrite;
 	output wire AdrSrc;
@@ -280,6 +285,7 @@ module decode (
 		.ResultSrc(ResultSrc),
 		.NextPC(NextPC),
 		.RegW(RegW),
+      	.RegW2(RegW2),
 		.MemW(MemW),
 		.Branch(Branch),
       	.ALUOp(ALUOp),	
@@ -358,6 +364,7 @@ module mainfsm (
 	ResultSrc,
 	NextPC,
 	RegW,
+  	RegW2,
 	MemW,
 	Branch,
 	ALUOp,
@@ -375,6 +382,7 @@ module mainfsm (
 	output wire [1:0] ResultSrc;
 	output wire NextPC;
 	output wire RegW;
+  	output wire RegW2;
 	output wire MemW;
 	output wire Branch;
 	output wire ALUOp;
@@ -448,21 +456,21 @@ module mainfsm (
 	// state-dependent output logic
 	always @(*) begin
 		case (state)
-			FETCH: controls =    14'b10001010011000;
-			DECODE: controls =   14'b00000010011000;
-			MEMADR: controls =   14'b00000000000100;
-			MEMRD: controls =    14'b00000100000000;
-			MEMWB: controls =    14'b00010001000000;
-			MEMWR: controls =    14'b00100100000000;
-			EXECUTER: controls = 14'b00000000000010;
-			EXECUTEI: controls = 14'b00000000000110;
-			ALUWB: controls =    14'b00010000000000;
-          	ALUWB2: controls = 	 14'b00010000000001;
-			BRANCH: controls =   14'b01000010100100;
-			default: controls =  14'bxxxxxxxxxxxxxx;
+			FETCH: controls =    15'b010001010011000;
+			DECODE: controls =   15'b000000010011000;
+			MEMADR: controls =   15'b000000000000100;
+			MEMRD: controls =    15'b000000100000000;
+			MEMWB: controls =    15'b000010001000000;
+			MEMWR: controls =    15'b000100100000000;
+			EXECUTER: controls = 15'b000000000000010;
+			EXECUTEI: controls = 15'b000000000000110;
+			ALUWB: controls =    15'b000010000000000;
+          	ALUWB2: controls = 	 15'b100010000000001;
+			BRANCH: controls =   15'b001000010100100;
+			default: controls =  15'bxxxxxxxxxxxxxxx;
 		endcase
 	end
-  assign {NextPC, Branch, MemW, RegW, IRWrite, AdrSrc,
+  assign {RegW2, NextPC, Branch, MemW, RegW, IRWrite, AdrSrc,
         ResultSrc, ALUSrcA, ALUSrcB, ALUOp, lmulFlag} = controls;
 endmodule
 
@@ -478,6 +486,7 @@ module condlogic (
 	PCS,
 	NextPC,
 	RegW,
+  	RegW2,
 	MemW,
 	PCWrite,
 	RegWrite,
@@ -491,9 +500,10 @@ module condlogic (
 	input wire PCS;
 	input wire NextPC;
 	input wire RegW;
+  	input wire RegW2;
 	input wire MemW;
 	output wire PCWrite;
-	output wire RegWrite;
+  	output wire [1:0] RegWrite;
 	output wire MemWrite;
 	wire [1:0] FlagWrite;
 	wire [3:0] Flags;
@@ -534,7 +544,8 @@ module condlogic (
     );
   
   	assign FlagWrite = FlagW & {2 {CondEx}};
-  	assign RegWrite = RegW & actualCondEx;
+  	assign RegWrite[0] = RegW & actualCondEx;
+  	assign RegWrite[1]  = RegW2  & actualCondEx;
     assign MemWrite = MemW & actualCondEx;
     assign PCSrc   = PCS & actualCondEx;
     assign PCWrite = PCSrc | NextPC;
@@ -1010,4 +1021,4 @@ module flopenr (
 			q <= 0;
 		else if (en)
 			q <= d;
-endmodule
+endmod
