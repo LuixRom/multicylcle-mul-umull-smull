@@ -1021,4 +1021,4 @@ module flopenr (
 			q <= 0;
 		else if (en)
 			q <= d;
-endmod
+endmodule
